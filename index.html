@@ -1,5 +1,15 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a6b7c" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1a21" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ôn thi Đấu thầu">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%230a6b7c%27/%3E%3Cpath d=%27M18 33l10 10 18-22%27 fill=%27none%27 stroke=%27white%27 stroke-width=%278%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
 <title>Ôn thi Đấu thầu</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
 <style>
 /* Layout: a single-column study desk. Setup cards on the home view, then one focused question card under a sticky progress bar. */
@@ -134,6 +144,33 @@ details.map summary{cursor:pointer;font-weight:600;font-size:.9rem}
 @media (prefers-reduced-motion:no-preference){.meter i{transition:width .3s}.opt{transition:border-color .12s,background .12s}}
 </style>
 
+
+<style>
+html{-webkit-text-size-adjust:100%;padding-top:env(safe-area-inset-top,0px)}
+[hidden]{display:none!important}
+body{margin:0;font-size:16px;-webkit-tap-highlight-color:transparent;padding-block:0 calc(92px + env(safe-area-inset-bottom,0px))}
+button,.opt,.cell,.chip{touch-action:manipulation}
+.wrap{max-width:560px}
+.top{padding:12px 0 10px}
+.grid2{grid-template-columns:1fr}
+.stats{grid-template-columns:repeat(2,1fr)}
+.btn{min-height:44px;font-size:.95rem}
+.opt{min-height:56px;padding:14px;font-size:1rem}
+.qtext{font-size:1.12rem}
+.qcard{padding:16px;margin-top:12px}
+.field input,.field select{min-height:44px;font-size:16px}
+.search{font-size:16px;min-height:46px}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:6;display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:10px;background:var(--surface);border-top:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dock .btn{padding-inline:6px}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet-in{background:var(--surface);width:100%;max-width:560px;max-height:78vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cells{grid-template-columns:repeat(auto-fill,minmax(46px,1fr))}
+.cell{min-height:44px}
+@media (min-width:700px){.dock{left:50%;right:auto;transform:translateX(-50%);width:560px;border:1px solid var(--line);border-bottom:0;border-radius:12px 12px 0 0}}
+</style>
+</head>
+<body>
 <div class="wrap" id="app"></div>
 
 <script>
@@ -237,8 +274,7 @@ function homeView(){
     <button class="btn" data-act="browse">Tra cứu cả bộ câu hỏi</button>
     <button class="btn danger" data-act="reset" ${done || flagged || store.exams.length ? '' : 'disabled'}>Xóa tiến độ</button>
   </div>
-  ${store.exams.length ? `<div class="section-t">Các lần thi thử gần đây</div><div class="hist">${hist}</div>` : ''}
-  <div class="foot">Đáp án lấy theo file gốc của bạn (đáp án đúng là chữ xanh in đậm). Tiến độ lưu trên trình duyệt đang dùng.</div>`;
+  ${store.exams.length ? `<div class="section-t">Các lần thi thử gần đây</div><div class="hist">${hist}</div>` : ''}`;
 }
 
 /* ---------- sessions ---------- */
@@ -328,7 +364,7 @@ function finish(){
   save();
   view = 'result'; render(); window.scrollTo(0,0);
 }
-function goto(i){ S.i = Math.max(0, Math.min(S.ids.length-1, i)); S.confirm = null; render(); window.scrollTo(0,0); }
+function goto(i){ S.i = Math.max(0, Math.min(S.ids.length-1, i)); S.confirm = null; S.showMap = false; render(); window.scrollTo(0,0); }
 
 /* ---------- QUIZ ---------- */
 function quizView(){
@@ -357,6 +393,7 @@ function quizView(){
     return `<button class="cell ${c} ${i === S.i ? 'cur' : ''} ${store.flags[x] ? 'flag' : ''}" data-go="${i}" aria-label="Câu thứ ${i+1}">${i+1}</button>`;
   }).join('');
   const last = S.i === total - 1;
+  const sheet = `<div class="sheet" role="dialog" aria-label="Danh sách câu"><div class="sheet-in"><div class="sheet-h"><b>Danh sách câu (${answered}/${total})</b><button class="btn" data-act="map">Đóng</button></div><div class="cells">${cells}</div>${S.mode === 'exam' ? '<div style="margin-top:14px"><button class="btn primary" data-act="ask-submit" style="width:100%">Nộp bài</button></div>' : ''}</div></div>`;
   let banner = '';
   if(S.confirm === 'submit'){
     const un = total - answered;
@@ -377,14 +414,12 @@ function quizView(){
       <div class="opts">${opts}</div>
       ${fb}
     </article>
-    <div class="nav">
-      <button class="btn" data-act="prev" ${S.i === 0 ? 'disabled' : ''}>Câu trước</button>
-      <span class="sp"></span>
-      ${last ? `<button class="btn primary" data-act="ask-submit">${S.mode === 'exam' ? 'Nộp bài' : 'Xem kết quả'}</button>` : `<button class="btn primary" data-act="next">Câu sau</button>`}
-    </div>
-    <details class="map"><summary>Danh sách câu (${answered}/${total} đã trả lời)</summary><div class="cells">${cells}</div>
-      ${S.mode === 'exam' && !last ? `<div style="margin-top:12px"><button class="btn" data-act="ask-submit">Nộp bài sớm</button></div>` : ''}</details>
-    <div class="foot">Phím tắt: A B C D hoặc 1 2 3 4 để chọn đáp án, mũi tên trái phải để chuyển câu.</div>`;
+    ${S.showMap ? sheet : ''}
+    <div class="dock">
+      <button class="btn" data-act="prev" ${S.i === 0 ? 'disabled' : ''} aria-label="Câu trước">‹ Trước</button>
+      <button class="btn" data-act="map" aria-label="Mở danh sách câu">${S.i+1}/${total} · Danh sách</button>
+      ${last ? `<button class="btn primary" data-act="ask-submit">${S.mode === 'exam' ? 'Nộp bài' : 'Kết quả'}</button>` : `<button class="btn primary" data-act="next">Sau ›</button>`}
+    </div>`;
 }
 
 /* ---------- RESULT ---------- */
@@ -484,7 +519,8 @@ app.addEventListener('click', e => {
     case 'next': return goto(S.i + 1);
     case 'flag': { const id = S.ids[S.i]; if(store.flags[id]) delete store.flags[id]; else store.flags[id] = 1; save(); return render(); }
     case 'ask-exit': S.confirm = 'exit'; return render();
-    case 'ask-submit': if(S.mode === 'practice'){ return finish(); } S.confirm = 'submit'; return render();
+    case 'ask-submit': S.showMap = false; if(S.mode === 'practice'){ return finish(); } S.confirm = 'submit'; return render();
+    case 'map': S.showMap = !S.showMap; return render();
     case 'cancel': S.confirm = null; return render();
     case 'finish': return finish();
     case 'exit': stopTimer(); S = null; view = 'home'; render(); return window.scrollTo(0,0);
@@ -511,5 +547,15 @@ document.addEventListener('keydown', e => {
   else if(e.key === 'ArrowRight'){ e.preventDefault(); goto(S.i + 1); }
   else if(e.key === 'ArrowLeft'){ e.preventDefault(); goto(S.i - 1); }
 });
+let tx = 0, ty = 0;
+app.addEventListener('touchstart', e => { const p = e.touches[0]; tx = p.clientX; ty = p.clientY; }, {passive:true});
+app.addEventListener('touchend', e => {
+  if(view !== 'quiz' || !S || S.showMap) return;
+  const p = e.changedTouches[0], dx = p.clientX - tx, dy = p.clientY - ty;
+  if(Math.abs(dx) > 70 && Math.abs(dy) < 45) goto(S.i + (dx < 0 ? 1 : -1));
+}, {passive:true});
 render();
 </script>
+
+</body>
+</html>
